@@ -54,7 +54,7 @@ def hello():
 @app.route("/customers/<int:page>", methods=["GET"])
 def customer_index(page = 1):
     """Show all the accounts, most recent first."""
-    display_limit = 10 #CONSTANT
+    display_limit = 2 #CONSTANT
 
     if page == 0:
         page = 1
@@ -462,7 +462,7 @@ def order_product(sku):
     return redirect(url_for("pay_order_page", cust_no=cust_no, order_no=last_order_no + 1))   
 
 
-@app.route("/pay/<order_no><cust_no>", methods=["GET"])
+@app.route("/pay/<order_no>/<cust_no>", methods=["GET"])
 def pay_order_page(order_no, cust_no):
     with pool.connection() as conn:
         with conn.cursor(row_factory=namedtuple_row) as cur:
@@ -481,10 +481,10 @@ def pay_order_page(order_no, cust_no):
                     """, {"cust_no": cust_no},
                     ).fetchone()[0]
                  
-    return render_template("/pay/pay_order.html", cust_name=cust_name, order_no=order_no, total_price=total_price)
+    return render_template("/pay/pay_order.html", cust_name=cust_name, order_no=order_no, total_price=total_price, cust_no=cust_no)
 
 
-@app.route("/pay/<order_no><cust_no>", methods=["POST"])
+@app.route("/pay/<order_no>/<cust_no>", methods=["POST"])
 def pay_order(order_no, cust_no):
     if not order_no:
         return "error: No such order."
@@ -512,9 +512,9 @@ def pay_order(order_no, cust_no):
 
             order_no_in_bd = cur.execute(
                 """
-                SELECT order_no,  
+                SELECT order_no  
                 FROM orders 
-                WHERE order_no = %(order_no)s(SELECT order_no FROM p);
+                WHERE order_no = %(order_no)s;
                 """,
                 {"order_no": order_no},
                 ).fetchone()
@@ -525,7 +525,7 @@ def pay_order(order_no, cust_no):
 
             order_no_in_pay = cur.execute(
                 """
-                SELECT order_no,  
+                SELECT order_no
                 FROM pay
                 WHERE order_no = %(order_no)s;
                 """,
@@ -534,8 +534,6 @@ def pay_order(order_no, cust_no):
 
             if order_no_in_pay:
                 return "A encomenda já foi paga."
-            
-            order_no_in_bd = order_no_in_bd[0]
 
             cur.execute(
                 """
@@ -546,7 +544,7 @@ def pay_order(order_no, cust_no):
             )
         conn.commit()
 
-    return redirect(url_for("product_index_page"))       
+    return redirect(url_for("product_index"))       
 
 
 
