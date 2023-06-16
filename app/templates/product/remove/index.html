@@ -1,0 +1,26 @@
+{%extends 'base.html' %}
+
+{% block header %}
+<h1 style="display: flex; margin:1% 0%; align-items: center; justify-content: space-between;">
+    <a href="{{ url_for('product_index') }}">
+        <img src="{{ url_for('static', filename='/back.png') }}" alt="Back"
+            style="width:34px;height:34px;border-top:1%;transform:rotate(180deg)">
+    </a>
+    <div style="color:red">Remove Product</div>
+    <a class="Button" id="green-button" href="{{ url_for('add_product') }}"> Add new Product </a>
+    <a class="Button" id="red-button" href="{{ url_for('remove_product_page') }}"> Remove Product </a>
+</h1>
+{% endblock %}
+
+
+
+
+{% block content %}
+
+<form method="post">
+    <label for="SKU">SKU</label>
+    <input name="SKU" id="SKU" type="text" placeholder="A-10004-B12-9" value="{{ request.form['SKU'] }}" required>
+    <input class="danger" type="submit" value="Delete" onclick="return confirm('Are you sure you want to delete this SKU?');">
+</form>
+
+{% endblock %}

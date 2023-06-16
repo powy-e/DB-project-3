@@ -58,9 +58,8 @@ def account_index():
         with conn.cursor(row_factory=namedtuple_row) as cur:
             accounts = cur.execute(
                 """
-                SELECT account_number, branch_name, balance
-                FROM account
-                ORDER BY account_number DESC;
+                SELECT *
+                FROM CUSTOMER;
                 """,
                 {},
             ).fetchall()
@@ -72,8 +71,203 @@ def account_index():
         and not request.accept_mimetypes["text/html"]
     ):
         return jsonify(accounts)
+    
+    cust = []
+    cust.append({"cust_no": 12, "name": "jose", "balance": 0})
+    cust.append({"cust_no": 13, "name": "carlos", "balance": 0})
+    cust.append({"cust_no": 14, "name": "Moedas", "balance": 69420})
 
-    return render_template("account/index.html", accounts=accounts)
+    return render_template("customer/index.html", customers=cust)
+
+
+@app.route("/products", methods=("GET", "POST"))
+def product_index():
+
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            products = cur.execute(
+                """
+                SELECT *
+                FROM PRODUCT;
+                """,
+                {},
+            ).fetchall()
+
+
+    return render_template("product/index.html", products=products)
+
+@app.route("/product/add", methods=["GET"])
+def add_product_page():
+
+    # get all products?
+
+    return render_template("product/add/index.html")
+
+@app.route("/product/add", methods=["POST"])
+def add_product():
+
+    sku = request.form["SKU"]
+    name = request.form["name"]
+    price = request.form["price"]
+    ean = request.form["EAN"]
+    desc = request.form["description"]
+
+
+
+    if not sku:
+        return "Sku is required."
+    elif len(sku) > 25:
+        return "Sku is required to be at most 25 characters long."
+
+    if not name:
+        return "Name is required."
+    elif len(name) > 200:
+        return "Name is required to be at most 200 characters long."
+
+    if not price:
+        return "Price is required."
+    else:
+        price_split = price.replace(",",".").split(".")
+    
+        if len(price_split) > 2:
+            return "Price is required to be numeric."
+        elif len(price_split) == 2:
+            if len(price_split[1])> 2:
+                return "Price is required to be have at most 2 decimal places."
+        for i in price_split:
+            if not i.isnumeric():
+                return "Price is required to be numeric."
+
+    if ean:
+        if not ean.isnumeric():
+            return "Balance is required to be numeric."
+        elif len(ean) != 13:
+            return "EAN must be 13 digits long."
+    else:
+        ean = None
+
+    if not desc:
+        desc = None
+
+
+   
+    
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            cur.execute(
+                """
+                INSERT INTO product (sku, name, description, price, ean)
+                VALUES (%(sku)s, %(name)s, %(description)s, %(price)s, %(ean)s);
+                """,
+                {"sku": sku, "name": name, "description": desc, "price": price, "ean": ean},
+            )
+        conn.commit()
+    return redirect(url_for("product_index"))
+
+
+@app.route("/product/remove", methods=["GET"])
+def remove_product_page():
+    return render_template("product/remove/index.html")
+
+@app.route("/product/remove", methods=["POST"])
+def remove_product():
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            cur.execute(
+                """
+                DELETE FROM contains
+                WHERE sku = %(sku)s;
+                """,
+                {"sku": request.form["SKU"]}
+            )
+
+            cur.execute(
+                """
+                DELETE FROM delivery
+                WHERE tin = 
+                    (SELECT tin FROM supplier
+                    WHERE sku = %(sku)s);
+                """, {"sku": request.form["SKU"]})
+            
+            cur.execute(
+                """
+                DELETE FROM supplier
+                WHERE sku = %(sku)s;
+                """, {"sku": request.form["SKU"]})
+            
+            cur.execute(
+                """
+                 DELETE FROM product
+                WHERE sku = %(sku)s;
+                """, {"sku": request.form["SKU"]})
+            
+        conn.commit()
+
+    return redirect(url_for("product_index"))
+
+@app.route("/product/<product_number>/edit", methods=["GET"])
+def product_edit_page(product_number):
+
+
+    return render_template("product/edit/index.html", product_number=product_number)
+
+@app.route("/product/<product_number>/edit", methods=["POST"])
+def product_edit(product_number):
+    try:
+        price = request.form["price"]
+    except:
+        price = None
+    try:
+        desc = request.form["description"]
+    except:
+        desc = None
+
+    if price:
+
+        price_split = price.replace(",",".").split(".")
+    
+        if len(price_split) > 2:
+            return "Price is required to be numeric."
+        elif len(price_split) == 2:
+            if len(price_split[1])> 2:
+                return "Price is required to be have at most 2 decimal places."
+        for i in price_split:
+            if not i.isnumeric():
+                return "Price is required to be numeric."
+
+        
+        with pool.connection() as conn:
+            with conn.cursor(row_factory=namedtuple_row) as cur:
+                cur.execute(
+                    """
+                    UPDATE product
+                    SET price = %(price)s
+                    WHERE sku = %(sku)s;
+                    """,
+                    {"sku": product_number, "price": price},
+                )
+            conn.commit()
+    
+    elif desc:
+        if len(desc) > 200:
+            return "Description is required to be at most 200 characters long."
+        
+        with pool.connection() as conn:
+            with conn.cursor(row_factory=namedtuple_row) as cur:
+                cur.execute(
+                    """
+                    UPDATE product
+                    SET description = %(description)s
+                    WHERE sku = %(sku)s;
+                    """,
+                    {"sku": product_number, "description": desc},
+                )
+            conn.commit()
+    else:
+        return "error: No changes made."
+    
+    return redirect(url_for("product_index"))
+
 
 
 @app.route("/accounts/<account_number>/update", methods=("GET", "POST"))
