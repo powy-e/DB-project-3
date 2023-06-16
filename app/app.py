@@ -83,9 +83,18 @@ def account_index():
 @app.route("/products", methods=("GET", "POST"))
 def product_index():
 
-    # get all products?
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            products = cur.execute(
+                """
+                SELECT *
+                FROM PRODUCT;
+                """,
+                {},
+            ).fetchall()
 
-    return render_template("product/index.html")
+
+    return render_template("product/index.html", products=products)
 
 @app.route("/product/add", methods=["GET"])
 def add_product_page():
@@ -103,35 +112,37 @@ def add_product():
     ean = request.form["EAN"]
     desc = request.form["description"]
 
-    error = None
+
 
     if not sku:
-        error = "Sku is required."
+        return "Sku is required."
     elif len(sku) > 25:
-        error = "Sku is required to be at most 25 characters long."
+        return "Sku is required to be at most 25 characters long."
 
     if not name:
-        error = "Name is required."
+        return "Name is required."
     elif len(name) > 200:
-        error = "Name is required to be at most 200 characters long."
+        return "Name is required to be at most 200 characters long."
 
     if not price:
-        error = "Price is required."
-    elif not price.isnumeric():
-            error = "Price is required to be numeric."
+        return "Price is required."
     else:
-        price_split = price.split(".")
+        price_split = price.replace(",",".").split(".")
+    
         if len(price_split) > 2:
-            error = "Price is required to be numeric."
+            return "Price is required to be numeric."
         elif len(price_split) == 2:
             if len(price_split[1])> 2:
-                error = "Price is required to be have at most 2 decimal places."
+                return "Price is required to be have at most 2 decimal places."
+        for i in price_split:
+            if not i.isnumeric():
+                return "Price is required to be numeric."
 
     if ean:
         if not ean.isnumeric():
-            error = "Balance is required to be numeric."
+            return "Balance is required to be numeric."
         elif len(ean) != 13:
-            error = "EAN must be 13 digits long."
+            return "EAN must be 13 digits long."
     else:
         ean = None
 
@@ -139,24 +150,20 @@ def add_product():
         desc = None
 
 
-    if error is not None:
-        return "there was an error: " + error
-    else:
-        with pool.connection() as conn:
-            with conn.cursor(row_factory=namedtuple_row) as cur:
-                cur.execute(
-                    """
-                    INSERT INTO product (sku, name, description, price, ean)
-                    VALUES (%(sku)s, %(name)s, %(description)s, %(price)s, %(ean)s);
-                    """,
-                    {"sku": sku, "name": name, "description": desc, "price": price, "ean": ean},
-                )
-            conn.commit()
-        return redirect(url_for("product_index"))
-
+   
     
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            cur.execute(
+                """
+                INSERT INTO product (sku, name, description, price, ean)
+                VALUES (%(sku)s, %(name)s, %(description)s, %(price)s, %(ean)s);
+                """,
+                {"sku": sku, "name": name, "description": desc, "price": price, "ean": ean},
+            )
+        conn.commit()
+    return redirect(url_for("product_index"))
 
-    return  
 
 @app.route("/product/remove", methods=["GET"])
 def remove_product_page():
@@ -196,7 +203,70 @@ def remove_product():
             
         conn.commit()
 
-    return "deleted: " + request.form["SKU"]
+    return redirect(url_for("product_index"))
+
+@app.route("/product/<product_number>/edit", methods=["GET"])
+def product_edit_page(product_number):
+
+
+    return render_template("product/edit/index.html", product_number=product_number)
+
+@app.route("/product/<product_number>/edit", methods=["POST"])
+def product_edit(product_number):
+    try:
+        price = request.form["price"]
+    except:
+        price = None
+    try:
+        desc = request.form["description"]
+    except:
+        desc = None
+
+    if price:
+
+        price_split = price.replace(",",".").split(".")
+    
+        if len(price_split) > 2:
+            return "Price is required to be numeric."
+        elif len(price_split) == 2:
+            if len(price_split[1])> 2:
+                return "Price is required to be have at most 2 decimal places."
+        for i in price_split:
+            if not i.isnumeric():
+                return "Price is required to be numeric."
+
+        
+        with pool.connection() as conn:
+            with conn.cursor(row_factory=namedtuple_row) as cur:
+                cur.execute(
+                    """
+                    UPDATE product
+                    SET price = %(price)s
+                    WHERE sku = %(sku)s;
+                    """,
+                    {"sku": product_number, "price": price},
+                )
+            conn.commit()
+    
+    elif desc:
+        if len(desc) > 200:
+            return "Description is required to be at most 200 characters long."
+        
+        with pool.connection() as conn:
+            with conn.cursor(row_factory=namedtuple_row) as cur:
+                cur.execute(
+                    """
+                    UPDATE product
+                    SET description = %(description)s
+                    WHERE sku = %(sku)s;
+                    """,
+                    {"sku": product_number, "description": desc},
+                )
+            conn.commit()
+    else:
+        return "error: No changes made."
+    
+    return redirect(url_for("product_index"))
 
 
 
