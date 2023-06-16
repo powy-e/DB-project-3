@@ -106,28 +106,36 @@ def add_customer_page():
 @app.route("/customer/add", methods=["POST"])
 def add_customer():
 
-    cust_no = request.form["cust_no"]
+    
     name = request.form["name"]
     address = request.form["address"]
     phone = request.form["phone"]
     email = request.form["email"]
 
-    if not cust_no:
-        return "Customer number is required."
-    if not cust_no.isnumeric():
-        return "Customer number is required to be numeric."
     
     if not name:
         return "Name is required."
     elif len(name) > 80:
         return "Name is required to be at most 80 characters long."
-    elif not name.isalpha():
-        return "Name is required to be alphabetic."
+
     
     if not email:
         return "Email is required."
     elif len(email) > 254:
         return "Email is required to be at most 254 characters long."
+    
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            email_exists = cur.execute(
+                """
+                SELECT *
+                FROM customer
+                WHERE email = %(email)s;
+                """,
+                {"email": email},
+            ).fetchone()
+    if email_exists:
+        return "Email already exists in the database."
     
     if address:
         if len(address) > 255:
@@ -145,12 +153,20 @@ def add_customer():
         
     with pool.connection() as conn:
         with conn.cursor(row_factory=namedtuple_row) as cur:
+            last_cust_no = cur.execute(
+                """
+                SELECT MAX(cust_no) AS last_cust_no
+                FROM customer;
+                """).fetchone()[0]
+
+            if last_cust_no is None:
+                last_cust_no = 0
             cur.execute(
                 """
                 INSERT INTO customer (cust_no, name, email, phone, address)
                 VALUES (%(cust_no)s, %(name)s, %(email)s, %(phone)s, %(address)s);
                 """,
-                {"cust_no": cust_no, "name": name, "email": email, "phone": phone, "address": address},
+                {"cust_no": last_cust_no + 1, "name": name, "email": email, "phone": phone, "address": address},
             )
         conn.commit()
 
