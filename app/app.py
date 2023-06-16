@@ -58,9 +58,8 @@ def account_index():
         with conn.cursor(row_factory=namedtuple_row) as cur:
             accounts = cur.execute(
                 """
-                SELECT account_number, branch_name, balance
-                FROM account
-                ORDER BY account_number DESC;
+                SELECT *
+                FROM CUSTOMER;
                 """,
                 {},
             ).fetchall()
@@ -72,8 +71,36 @@ def account_index():
         and not request.accept_mimetypes["text/html"]
     ):
         return jsonify(accounts)
+    
+    cust = []
+    cust.append({"cust_no": 12, "name": "jose", "balance": 0})
+    cust.append({"cust_no": 13, "name": "carlos", "balance": 0})
+    cust.append({"cust_no": 14, "name": "Moedas", "balance": 69420})
 
-    return render_template("account/index.html", accounts=accounts)
+    return render_template("customer/index.html", customers=cust)
+
+
+@app.route("/products", methods=("GET", "POST"))
+def product_index():
+
+    # get all products?
+
+    return render_template("product/index.html")
+
+@app.route("/product/add", methods=("GET", "POST"))
+def add_product():
+
+    # get all products?
+
+    return "hello add new prod"
+
+@app.route("/product/remove", methods=("GET", "POST"))
+def remove_product():
+
+    # get all products?
+
+    return "hello remove prod gitlab reference"
+
 
 
 @app.route("/accounts/<account_number>/update", methods=("GET", "POST"))
