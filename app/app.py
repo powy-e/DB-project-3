@@ -45,15 +45,13 @@ log = app.logger
 
 @app.route("/hello", methods=("GET",))
 def hello():
-    """Show the index page."""
-    print("hello")
+    """hello world."""
     return "Hello, world!"
 
 @app.route("/", methods=("GET",))
 @app.route("/customers", defaults = {'page': 1}, methods=("GET",))
 @app.route("/customers/<int:page>", methods=["GET"])
 def customer_index(page = 1):
-    """Show all the accounts, most recent first."""
     display_limit = 2 #CONSTANT
 
     if page == 0:
@@ -176,9 +174,6 @@ def add_customer():
 
 @app.route("/customer/remove", methods=["GET"])
 def remove_customer_page():
-
-    # get all products?
-
     return render_template("customer/remove/index.html")
 
 @app.route("/customer/remove", methods=["POST"])
@@ -239,9 +234,6 @@ def remove_customer():
 
 @app.route("/product/add", methods=["GET"])
 def add_product_page():
-
-    # get all products?
-
     return render_template("product/add/index.html")
 
 
@@ -348,72 +340,6 @@ def product_edit(product_number):
         return "error: No changes made."
     
     return redirect(url_for("product_index"))
-
-
-
-@app.route("/accounts/<account_number>/update", methods=("GET", "POST"))
-def account_update(account_number):
-    """Update the account balance."""
-
-    with pool.connection() as conn:
-        with conn.cursor(row_factory=namedtuple_row) as cur:
-            account = cur.execute(
-                """
-                SELECT account_number, branch_name, balance
-                FROM account
-                WHERE account_number = %(account_number)s;
-                """,
-                {"account_number": account_number},
-            ).fetchone()
-            log.debug(f"Found {cur.rowcount} rows.")
-
-    if request.method == "POST":
-        balance = request.form["balance"]
-
-        error = None
-
-        if not balance:
-            error = "Balance is required."
-            if not balance.isnumeric():
-                error = "Balance is required to be numeric."
-
-        if error is not None:
-            flash(error)
-        else:
-            with pool.connection() as conn:
-                with conn.cursor(row_factory=namedtuple_row) as cur:
-                    cur.execute(
-                        """
-                        UPDATE account
-                        SET balance = %(balance)s
-                        WHERE account_number = %(account_number)s;
-                        """,
-                        {"account_number": account_number, "balance": balance},
-                    )
-                conn.commit()
-            return redirect(url_for("account_index"))
-
-    return render_template("account/update.html", account=account)
-
-
-@app.route("/accounts/<account_number>/delete", methods=("POST",))
-def account_delete(account_number):
-    """Delete the account."""
-
-    with pool.connection() as conn:
-        with conn.cursor(row_factory=namedtuple_row) as cur:
-            cur.execute(
-                """
-                DELETE FROM account
-                WHERE account_number = %(account_number)s;
-                """,
-                {"account_number": account_number},
-            )
-        conn.commit()
-    return redirect(url_for("account_index"))
-
-
-
 
 @app.route("/product/order/<sku>", methods=["GET"])
 def order_product_page(sku):
@@ -561,14 +487,6 @@ def pay_order(order_no, cust_no):
         conn.commit()
 
     return redirect(url_for("product_index"))       
-
-
-
-
-@app.route("/ping", methods=("GET",))
-def ping():
-    log.debug("ping!")
-    return jsonify({"message": "pong!", "status": "success"})
 
 
 if __name__ == "__main__":
