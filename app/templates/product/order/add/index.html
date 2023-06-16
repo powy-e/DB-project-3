@@ -1,0 +1,27 @@
+{%extends 'base.html'%}
+
+{% block header %}
+<h1 style="display: flex; margin:1% 0%; align-items: center;">
+    <a href="{{ url_for('product_index') }}">
+        <img src="{{ url_for('static', filename='/back.png') }}" alt="Back"
+            style="width:34px;height:34px;border-top:1%;transform:rotate(180deg)">
+    </a>
+    <div style="margin-left: 2%;">Order Product</div>
+</h1>
+{% endblock %}
+
+
+
+
+{% block content %}
+
+<form method="post">
+    <label for="qty">Quantity</label>
+    <input name="qty" id="qty" type="number" placeholder="2" min=0 step="1" value="{{ request.form['qty'] }}" required>
+    <label for="cust_no">Customer Number</label>
+    <input name="cust_no" id="cust_no" type="number" placeholder="10" min="0" step="1"
+        value="{{ request.form['cust_no'] }}" required>
+    <input type="submit" value="Order">
+</form>
+
+{% endblock %}

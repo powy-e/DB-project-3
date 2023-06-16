@@ -50,51 +50,176 @@ def hello():
     return "Hello, world!"
 
 @app.route("/", methods=("GET",))
-@app.route("/accounts", methods=("GET",))
-def account_index():
+@app.route("/customers", defaults = {'page': 1}, methods=("GET",))
+@app.route("/customers/<int:page>", methods=["GET"])
+def customer_index(page = 1):
     """Show all the accounts, most recent first."""
+    display_limit = 10 #CONSTANT
+
+    if page == 0:
+        page = 1
+    offset = (page - 1) * display_limit
 
     with pool.connection() as conn:
         with conn.cursor(row_factory=namedtuple_row) as cur:
-            accounts = cur.execute(
+            customers = cur.execute(
                 """
                 SELECT *
-                FROM CUSTOMER;
+                FROM CUSTOMER
+                LIMIT %(display_limit)s OFFSET %(offset)s;
                 """,
-                {},
+                {"display_limit": display_limit, "offset": offset},
             ).fetchall()
-            log.debug(f"Found {cur.rowcount} rows.")
-
-    # API-like response is returned to clients that request JSON explicitly (e.g., fetch)
-    if (
-        request.accept_mimetypes["application/json"]
-        and not request.accept_mimetypes["text/html"]
-    ):
-        return jsonify(accounts)
+            max_obj = cur.rowcount + offset
     
-    cust = []
-    cust.append({"cust_no": 12, "name": "jose", "balance": 0})
-    cust.append({"cust_no": 13, "name": "carlos", "balance": 0})
-    cust.append({"cust_no": 14, "name": "Moedas", "balance": 69420})
+    return render_template("customer/index.html", customers=customers, page=page, display_limit = display_limit, max_obj = max_obj)
 
-    return render_template("customer/index.html", customers=cust)
-
-
+@app.route("/products", defaults = {'page': 1}, methods=("GET", "POST"))
 @app.route("/products", methods=("GET", "POST"))
-def product_index():
+def product_index(page = 1):
+
+    display_limit = 10 #CONSTANT
+
+    if page == 0:
+        page = 1
+    offset = (page - 1) * display_limit
 
     with pool.connection() as conn:
         with conn.cursor(row_factory=namedtuple_row) as cur:
             products = cur.execute(
                 """
                 SELECT *
-                FROM PRODUCT;
+                FROM PRODUCT
+                LIMIT %(display_limit)s OFFSET %(offset)s;
                 """,
-                {},
+                {"display_limit": display_limit, "offset": offset},
             ).fetchall()
+            max_obj = cur.rowcount + offset
+
+    return render_template("product/index.html", products=products, page=page, display_limit = display_limit, max_obj = max_obj)
+
+@app.route("/customer/add", methods=["GET"])
+def add_customer_page():
+
+    return render_template("customer/add/index.html")
+
+@app.route("/customer/add", methods=["POST"])
+def add_customer():
+
+    cust_no = request.form["cust_no"]
+    name = request.form["name"]
+    address = request.form["address"]
+    phone = request.form["phone"]
+    email = request.form["email"]
+
+    if not cust_no:
+        return "Customer number is required."
+    if not cust_no.isnumeric():
+        return "Customer number is required to be numeric."
+    
+    if not name:
+        return "Name is required."
+    elif len(name) > 80:
+        return "Name is required to be at most 80 characters long."
+    elif not name.isalpha():
+        return "Name is required to be alphabetic."
+    
+    if not email:
+        return "Email is required."
+    elif len(email) > 254:
+        return "Email is required to be at most 254 characters long."
+    
+    if address:
+        if len(address) > 255:
+            return "Address is required to be at most 255 characters long."
+    else:
+        address = None
+    
+    if phone:
+        if len(phone) > 15:
+            return "Phone is required to be at most 20 characters long."
+        if not phone.isnumeric():
+            return "Phone is required to be numeric."
+    else:
+        phone = None
+        
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            cur.execute(
+                """
+                INSERT INTO customer (cust_no, name, email, phone, address)
+                VALUES (%(cust_no)s, %(name)s, %(email)s, %(phone)s, %(address)s);
+                """,
+                {"cust_no": cust_no, "name": name, "email": email, "phone": phone, "address": address},
+            )
+        conn.commit()
 
 
-    return render_template("product/index.html", products=products)
+    return redirect(url_for("customer_index"))
+
+
+@app.route("/customer/remove", methods=["GET"])
+def remove_customer_page():
+
+    # get all products?
+
+    return render_template("customer/remove/index.html")
+
+@app.route("/customer/remove", methods=["POST"])
+def remove_customer():
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            # delete from pay
+            cur.execute(
+                """
+                DELETE FROM pay
+                WHERE cust_no = %(cust_no)s;
+                """,
+                {"cust_no": request.form["cust_no"]}
+            )
+            
+            #delete orders from contains
+            cur.execute(
+                """
+                DELETE FROM contains
+                WHERE order_no IN (
+                    SELECT order_no
+                    FROM orders
+                    WHERE cust_no = %(cust_no)s
+                );
+                """, {"cust_no": request.form["cust_no"]})
+            
+            # delete orders from process
+            cur.execute(
+                """
+                DELETE FROM process
+                WHERE order_no IN (
+                    SELECT order_no
+                    FROM orders
+                    WHERE cust_no = %(cust_no)s
+                );
+                """, {"cust_no": request.form["cust_no"]})
+            
+            cur.execute(
+                """
+                DELETE FROM orders
+                WHERE cust_no = %(cust_no)s;
+                """,
+                {"cust_no": request.form["cust_no"]})
+
+
+            cur.execute(
+                """
+                DELETE FROM customer
+                WHERE cust_no = %(cust_no)s;
+                """,
+                {"cust_no": request.form["cust_no"]}
+            )
+        conn.commit()
+
+    return redirect(url_for("customer_index"))
+
+
 
 @app.route("/product/add", methods=["GET"])
 def add_product_page():
@@ -103,66 +228,6 @@ def add_product_page():
 
     return render_template("product/add/index.html")
 
-@app.route("/product/add", methods=["POST"])
-def add_product():
-
-    sku = request.form["SKU"]
-    name = request.form["name"]
-    price = request.form["price"]
-    ean = request.form["EAN"]
-    desc = request.form["description"]
-
-
-
-    if not sku:
-        return "Sku is required."
-    elif len(sku) > 25:
-        return "Sku is required to be at most 25 characters long."
-
-    if not name:
-        return "Name is required."
-    elif len(name) > 200:
-        return "Name is required to be at most 200 characters long."
-
-    if not price:
-        return "Price is required."
-    else:
-        price_split = price.replace(",",".").split(".")
-    
-        if len(price_split) > 2:
-            return "Price is required to be numeric."
-        elif len(price_split) == 2:
-            if len(price_split[1])> 2:
-                return "Price is required to be have at most 2 decimal places."
-        for i in price_split:
-            if not i.isnumeric():
-                return "Price is required to be numeric."
-
-    if ean:
-        if not ean.isnumeric():
-            return "Balance is required to be numeric."
-        elif len(ean) != 13:
-            return "EAN must be 13 digits long."
-    else:
-        ean = None
-
-    if not desc:
-        desc = None
-
-
-   
-    
-    with pool.connection() as conn:
-        with conn.cursor(row_factory=namedtuple_row) as cur:
-            cur.execute(
-                """
-                INSERT INTO product (sku, name, description, price, ean)
-                VALUES (%(sku)s, %(name)s, %(description)s, %(price)s, %(ean)s);
-                """,
-                {"sku": sku, "name": name, "description": desc, "price": price, "ean": ean},
-            )
-        conn.commit()
-    return redirect(url_for("product_index"))
 
 
 @app.route("/product/remove", methods=["GET"])
@@ -332,6 +397,160 @@ def account_delete(account_number):
     return redirect(url_for("account_index"))
 
 
+
+
+@app.route("/product/order/<sku>", methods=["GET"])
+def order_product_page(sku):
+    return render_template("product/order/add/index.html", sku=sku)
+
+@app.route("/product/order/<sku>", methods=["POST"])
+def order_product(sku):
+    qty = request.form["qty"]
+    cust_no = request.form["cust_no"]
+    if not qty:
+        return "Quantity is required."
+    if not qty.isnumeric():
+        return "Quantity is required to be numeric."
+    if not cust_no:
+        return "Customer number is required."
+    if not cust_no.isnumeric():
+        return "Customer number is required to be numeric."
+    
+
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            last_order_no = cur.execute(
+                """
+                SELECT MAX(order_no) AS last_order_no
+                FROM orders;
+                """).fetchone()[0]
+
+            if last_order_no is None:
+                last_order_no = 0
+
+            cust_no_in_bd = cur.execute(
+                """
+                SELECT cust_no 
+                FROM customer
+                WHERE cust_no = %(cust_no)s;
+                """,
+                {"cust_no": cust_no},
+                ).fetchone()
+
+            if not cust_no_in_bd:
+                return "O cliente introduzido não existe."
+            
+            cust_no_in_bd = cust_no_in_bd[0]
+            
+
+            cur.execute(
+                """
+                INSERT INTO orders (order_no, cust_no, date)
+                VALUES (%(order_no)s, %(cust_no)s, CURRENT_DATE);
+                """,
+                {"order_no": last_order_no + 1, "cust_no": cust_no}
+            )
+            cur.execute(
+                """
+                INSERT INTO contains (order_no, SKU, qty)
+                VALUES (%(order_no)s, %(SKU)s, %(qty)s);
+                """,
+                {"order_no": last_order_no + 1, "SKU": sku, "qty": qty}
+            )
+        conn.commit()
+
+    return redirect(url_for("pay_order_page", cust_no=cust_no, order_no=last_order_no + 1))   
+
+
+@app.route("/pay/<order_no><cust_no>", methods=["GET"])
+def pay_order_page(order_no, cust_no):
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+                total_price = cur.execute(
+                    """
+                    SELECT p.price * c.qty AS total_price
+                    FROM contains AS c, product AS p
+                    WHERE c.order_no = %(order_no)s AND c.sku = p.sku;
+                    """, {"order_no": order_no},
+                    ).fetchone()[0]
+                cust_name = cur.execute(
+                    """
+                    SELECT name 
+                    FROM customer 
+                    WHERE cust_no = %(cust_no)s;
+                    """, {"cust_no": cust_no},
+                    ).fetchone()[0]
+                 
+    return render_template("/pay/pay_order.html", cust_name=cust_name, order_no=order_no, total_price=total_price)
+
+
+@app.route("/pay/<order_no><cust_no>", methods=["POST"])
+def pay_order(order_no, cust_no):
+    if not order_no:
+        return "error: No such order."
+    if not cust_no:
+        return "error: No such customer."
+    if not order_no.isnumeric():
+        return "error: Order is invalid"
+    if not cust_no.isnumeric():
+        return "Customer number is invalid."
+    
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            cust_no_in_bd = cur.execute(
+                """
+                SELECT cust_no 
+                FROM customer
+                WHERE cust_no = %(cust_no)s;
+                """,
+                {"cust_no": cust_no},
+                ).fetchone()
+
+            if not cust_no_in_bd:
+                return "O cliente introduzido não existe."
+            
+
+            order_no_in_bd = cur.execute(
+                """
+                SELECT order_no,  
+                FROM orders 
+                WHERE order_no = %(order_no)s(SELECT order_no FROM p);
+                """,
+                {"order_no": order_no},
+                ).fetchone()
+
+            if not order_no_in_bd:
+                return "A encomenda introduzida não existe."
+            
+
+            order_no_in_pay = cur.execute(
+                """
+                SELECT order_no,  
+                FROM pay
+                WHERE order_no = %(order_no)s;
+                """,
+                {"order_no": order_no},
+                ).fetchone()
+
+            if order_no_in_pay:
+                return "A encomenda já foi paga."
+            
+            order_no_in_bd = order_no_in_bd[0]
+
+            cur.execute(
+                """
+                INSERT INTO pay (order_no, cust_no)
+                VALUES (%(order_no)s, %(cust_no)s);
+                """,
+                {"order_no": order_no, "cust_no": cust_no}
+            )
+        conn.commit()
+
+    return redirect(url_for("product_index_page"))       
+
+
+
+
 @app.route("/ping", methods=("GET",))
 def ping():
     log.debug("ping!")
@@ -340,3 +559,5 @@ def ping():
 
 if __name__ == "__main__":
     app.run()
+
+

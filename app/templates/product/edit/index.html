@@ -23,7 +23,7 @@
         </span>
         <span style="display:flex; justify-self: space-evenly; margin: 1% 3%; font-size: 90%;">(Previous Price: {{request.args.price}}€)
         </span>
-        <input style="margin-left: 3%; margin-top: 4%;" type="submit" value="Update Price" onclick="return alert('Price Changed');">
+        <input style="margin-left: 3%; margin-top: 4%;" type="submit" value="Update Price" onsubmit="return alert('Price Changed');">
     </form>
     <form method="post">
         <p style="font-weight: bold;">Update Description: </p>
@@ -33,7 +33,7 @@
             value="{{ request.form['description'] }}" required>
         </span>
         </span>
-        <input style="margin-left: 3%; margin-top: 4%;" type="submit" value="Update Description" onclick="return alert('Description Updated');">
+        <input style="margin-left: 3%; margin-top: 4%;" type="submit" value="Update Description" onsubmit="return alert('Description Updated');">
     </form>
 </div>
 

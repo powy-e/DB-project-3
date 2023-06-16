@@ -1,29 +1,49 @@
 {% extends 'base.html' %}
 
-{% block header %}
-<div>
-<h1>hello</h1>
-    <div class="about">in brancho</div>
-</div>
-    <a class="action" >Edit</a>
 
-  <h1></h1>
+{% block header %}
+<h1 style="display: flex; margin:1% 0%; align-items: center; justify-content: space-between;">
+  <div>Customers</div>
+  <a class="Button" id="green-button" href="{{ url_for('add_customer_page') }}"> Add new Customer </a>
+  <a class="Button" id="red-button" href="{{ url_for('remove_customer_page') }}"> Remove Customer </a>
+</h1>
 {% endblock %}
 
+
 {% block content %}
-  {% for cust in customers %}
-    <article class="post">
-      <header>
-        <div>
-          <h1>{{ cust['cust_no'] }}</h1>
-          <div class="about">in {{ cust['name'] }}</div>
-        </div>
-         <a class="action" href="gb.com">Edit</a>
-      </header>
-      <p class="body">€ {{ cust['balance'] }}</p>
-    </article>
-    {% if not loop.last %}
-      <hr>
-    {% endif %}
-  {% endfor %}
+{% for cust in customers %}
+<article class="post">
+  <header>
+    <div>
+      <h1>{{ cust['name'] }}</h1>
+      <div class="about">Customer Number: {{ cust['cust_no'] }}</div>
+    </div>
+  </header>
+  <div style="margin-left: 1%;">
+    <p><span style="font-weight: bold;">Email:</span> <span class="about"> {{ cust['email'] }}</span></p>
+    <p><span style="font-weight: bold;">Phone number:</span> <span class="about"> {{ cust['phone'] }}</span></p>
+    <p><span style="font-weight: bold;">Address:</span> <span class="about"> {{ cust['address'] }}</span></p>
+  </div>
+</article>
+{% if not loop.last %}
+<hr>
+{% endif %}
+{% endfor %}
+
+<h1 style="display: flex; margin:1% 0%; align-items: center; justify-content: space-between;">
+  {% if page != 1 %}
+  <a class="Button" id="green-button" href="{{ url_for('customer_index',page=page-1) }}"> Previous Page </a>
+  {% else%}
+  <a class="Button" id="gray-button"> No Previous Page </a>
+  {% endif %}
+
+  <div>Page {{page}} ( {{1+((page-1)*display_limit)}} - {{page*display_limit}} )</div>
+
+  {% if max_obj < page*display_limit %}
+  <a class="Button" id="gray-button"> No Next Page </a>
+  {% else %}
+  <a class="Button" id="red-button" href="{{ url_for('customer_index',page=page+1) }}"> Next Page </a>
+  {% endif %}
+</h1>
+
 {% endblock %}

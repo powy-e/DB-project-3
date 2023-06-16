@@ -1,0 +1,44 @@
+{%extends 'base.html' %}
+
+{% block header %}
+<h1 style="display: flex; margin:1% 0%; align-items: center; justify-content: space-between;">
+    <a href="{{ url_for('customer_index') }}">
+        <img src="{{ url_for('static', filename='/back.png') }}" alt="Back"
+            style="width:34px;height:34px;border-top:1%;transform:rotate(180deg)">
+    </a>
+    <div>Add Customer</div>
+    <a class="Button" id="green-button" href="{{ url_for('add_customer_page') }}"> Add new Customer </a>
+    <a class="Button" id="red-button" href="{{ url_for('remove_customer_page') }}"> Remove Customer </a>
+</h1>
+{% endblock %}
+
+
+
+
+{% block content %}
+
+<form method="post">
+    <label for="cust_no">Customer Number</label>
+    <input name="cust_no" id="cust_no" type="text" placeholder="10" value="{{ request.form['cust_no'] }}" required>
+
+    <label for="name">Name</label>
+    <input name="name" id="name" type="text" placeholder="Alface" value="{{ request.form['name'] }}" required>
+
+    <label for="email">Email</label>
+    <div style="justify-content: space-around;">
+        <input placeholder="tecnico@tecnico.pt" name="email" id="email" style="margin-right: 0;" type="email" value="{{ request.form['email'] }}"
+            required>
+    </div>
+
+    <label for="phone">Phone Number</label>
+    <input name="phone" id="phone" style="margin-right: 0;" type="number" step="1"
+        placeholder="961321421" value="{{ request.form['phone'] }}">
+
+    <label for="address">Address</label>
+    <input name="address" id="address" type="text" placeholder="Rua da Alface, 10, 1000-001 Leça da Palmeira, Portugal"
+        value="{{ request.form['address'] }}">
+
+    <input type="submit" value="Add Customer">
+</form>
+
+{% endblock %}

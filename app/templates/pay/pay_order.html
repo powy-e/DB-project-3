@@ -1,0 +1,29 @@
+{%extends 'base.html' %}
+
+{% block header %}
+<h1 style="display: flex; margin:1% 0%; align-items: center;">
+    <a href="{{ url_for('product_index') }}">
+        <img src="{{ url_for('static', filename='/back.png') }}" alt="Back"
+            style="width:34px;height:34px;border-top:1%;transform:rotate(180deg)">
+    </a>
+    <div style="color:rgb(27, 134, 17)">Pay Order</div>
+</h1>
+
+{% endblock %}
+
+{% block content %}
+
+<article class="post">
+    <header>
+        <div style="align-self: flex-start;">
+            <h1>Order #{{ order_no }}</h1>
+            <div class="about">by: {{cust_name}}</div>
+        </div>
+    </header>
+    <div class="description" style="display: flex; justify-content: space-between;">
+        <div style="font-size: large; margin-top: 2.8%; font-weight: bold; font-style: italic;">Order Total: {{total_price}}</div>
+        <submit class="Button" id="green-button" onclick="return confirm('Are you sure you want to pay this order?');">Pay</submit>
+    </div>
+</article>
+
+{% endblock %}

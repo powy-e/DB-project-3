@@ -1,0 +1,26 @@
+{%extends 'base.html' %}
+
+{% block header %}
+<h1 style="display: flex; margin:1% 0%; align-items: center; justify-content: space-between;">
+    <a href="{{ url_for('customer_index') }}">
+        <img src="{{ url_for('static', filename='/back.png') }}" alt="Back"
+            style="width:34px;height:34px;border-top:1%;transform:rotate(180deg)">
+    </a>
+    <div>Add Customer</div>
+    <a class="Button" id="green-button" href="{{ url_for('add_customer_page') }}"> Add new Customer </a>
+    <a class="Button" id="red-button" href="{{ url_for('remove_customer_page') }}"> Remove Customer </a>
+</h1>
+{% endblock %}
+
+
+
+
+{% block content %}
+
+<form method="post">
+    <label for="cust_no">Customer</label>
+    <input name="cust_no" id="cust_no" type="text" placeholder="10" value="{{ request.form['cust_no'] }}" required>
+    <input class="danger" type="submit" value="Delete" onclick="return confirm('Are you sure you want to delete this Customer?');">
+</form>
+
+{% endblock %}

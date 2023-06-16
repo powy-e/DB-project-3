@@ -3,7 +3,7 @@
 {% block header %}
 <h1 style="display: flex; margin:1% 0%; align-items: center; justify-content: space-between;">
   <div>Products</div>
-  <a class="Button" id="green-button" href="{{ url_for('add_product') }}"> Add new Product </a>
+  <a class="Button" id="green-button" href="{{ url_for('add_product_page') }}"> Add new Product </a>
   <a class="Button" id="red-button" href="{{ url_for('remove_product_page') }}"> Remove Product </a>
 </h1>
 {% endblock %}
@@ -21,6 +21,7 @@
       <a class="action"
       href="{{ url_for('product_edit_page', product_number=prod['sku'], price=prod['price'], name=prod['name'])}}">Edit</a>
       <p>€ {{ prod['price'] }}</p>
+      <a class="Button" id="purple-button" href="{{ url_for('order_product_page', sku=prod['sku']) }}"> Order </a>
     </div>
   </header>
   <span style="margin-left: 0.4%;">Description: <p class="about" style="margin-left: 1.3%;">{{prod['description']}}</p> </span>
@@ -29,4 +30,20 @@
 <hr>
 {% endif %}
 {% endfor %}
+
+<h1 style="display: flex; margin:1% 0%; align-items: center; justify-content: space-between;">
+  {% if page != 1 %}
+  <a class="Button" id="green-button" href="{{ url_for('customer_index',page=page-1) }}"> Previous Page </a>
+  {% else%}
+  <a class="Button" id="gray-button"> No Previous Page </a>
+  {% endif %}
+
+  <div>Page {{page}} ( {{1+((page-1)*display_limit)}} - {{page*display_limit}} )</div>
+
+  {% if max_obj < page*display_limit %}
+  <a class="Button" id="gray-button"> No Next Page </a>
+  {% else %}
+  <a class="Button" id="red-button" href="{{ url_for('customer_index',page=page+1) }}"> Next Page </a>
+  {% endif %}
+
 {% endblock %}

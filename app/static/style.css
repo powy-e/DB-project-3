@@ -175,6 +175,16 @@ html {
   box-shadow: rgba(41, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, .3) 0 7px 13px -3px,rgba(58, 65, 111, .5) 0 -3px 0 inset;
 }
 
+#purple-button {
+  background-image: radial-gradient(100% 100% at 100% 0, #9d67bc 0, rgb(142, 58, 148) 100%);
+  box-shadow: rgba(41, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, .3) 0 7px 13px -3px,rgba(58, 65, 111, .5) 0 -3px 0 inset;
+}
+
+#gray-button {
+  background-image: radial-gradient(100% 100% at 100% 0, #2c2f33 0, rgb(57, 57, 65)00%);
+  box-shadow: rgba(41, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, .3) 0 7px 13px -3px,rgba(58, 65, 111, .5) 0 -3px 0 inset;
+}
+
 .Button:focus {
   box-shadow: #3c4fe0 0 0 0 1.5px inset, rgba(45, 35, 66, .4) 0 2px 4px, rgba(45, 35, 66, .3) 0 7px 13px -3px, #3c4fe0 0 -3px 0 inset;
 }
