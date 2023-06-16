@@ -87,19 +87,116 @@ def product_index():
 
     return render_template("product/index.html")
 
-@app.route("/product/add", methods=("GET", "POST"))
+@app.route("/product/add", methods=["GET"])
+def add_product_page():
+
+    # get all products?
+
+    return render_template("product/add/index.html")
+
+@app.route("/product/add", methods=["POST"])
 def add_product():
 
-    # get all products?
+    sku = request.form["SKU"]
+    name = request.form["name"]
+    price = request.form["price"]
+    ean = request.form["EAN"]
+    desc = request.form["description"]
 
-    return "hello add new prod"
+    error = None
 
-@app.route("/product/remove", methods=("GET", "POST"))
+    if not sku:
+        error = "Sku is required."
+    elif len(sku) > 25:
+        error = "Sku is required to be at most 25 characters long."
+
+    if not name:
+        error = "Name is required."
+    elif len(name) > 200:
+        error = "Name is required to be at most 200 characters long."
+
+    if not price:
+        error = "Price is required."
+    elif not price.isnumeric():
+            error = "Price is required to be numeric."
+    else:
+        price_split = price.split(".")
+        if len(price_split) > 2:
+            error = "Price is required to be numeric."
+        elif len(price_split) == 2:
+            if len(price_split[1])> 2:
+                error = "Price is required to be have at most 2 decimal places."
+
+    if ean:
+        if not ean.isnumeric():
+            error = "Balance is required to be numeric."
+        elif len(ean) != 13:
+            error = "EAN must be 13 digits long."
+    else:
+        ean = None
+
+    if not desc:
+        desc = None
+
+
+    if error is not None:
+        return "there was an error: " + error
+    else:
+        with pool.connection() as conn:
+            with conn.cursor(row_factory=namedtuple_row) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO product (sku, name, description, price, ean)
+                    VALUES (%(sku)s, %(name)s, %(description)s, %(price)s, %(ean)s);
+                    """,
+                    {"sku": sku, "name": name, "description": desc, "price": price, "ean": ean},
+                )
+            conn.commit()
+        return redirect(url_for("product_index"))
+
+    
+
+    return  
+
+@app.route("/product/remove", methods=["GET"])
+def remove_product_page():
+    return render_template("product/remove/index.html")
+
+@app.route("/product/remove", methods=["POST"])
 def remove_product():
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=namedtuple_row) as cur:
+            cur.execute(
+                """
+                DELETE FROM contains
+                WHERE sku = %(sku)s;
+                """,
+                {"sku": request.form["SKU"]}
+            )
 
-    # get all products?
+            cur.execute(
+                """
+                DELETE FROM delivery
+                WHERE tin = 
+                    (SELECT tin FROM supplier
+                    WHERE sku = %(sku)s);
+                """, {"sku": request.form["SKU"]})
+            
+            cur.execute(
+                """
+                DELETE FROM supplier
+                WHERE sku = %(sku)s;
+                """, {"sku": request.form["SKU"]})
+            
+            cur.execute(
+                """
+                 DELETE FROM product
+                WHERE sku = %(sku)s;
+                """, {"sku": request.form["SKU"]})
+            
+        conn.commit()
 
-    return "hello remove prod gitlab reference"
+    return "deleted: " + request.form["SKU"]
 
 
 
